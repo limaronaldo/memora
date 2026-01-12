@@ -20,7 +20,7 @@ A lightweight MCP server for semantic memory storage, knowledge graphs, and cros
 </p>
 
 <details open>
-<summary><strong>Features</strong></summary>
+<summary><big><strong>Features</strong></big></summary>
 
 - 💾 **Persistent Storage** - SQLite-backed database with optional cloud sync (S3, GCS, Azure)
 - 🔍 **Semantic Search** - Vector embeddings (TF-IDF, sentence-transformers, or OpenAI)
@@ -39,7 +39,7 @@ A lightweight MCP server for semantic memory storage, knowledge graphs, and cros
 </details>
 
 <details>
-<summary><strong>Install</strong></summary>
+<summary><big><strong>Install</strong></big></summary>
 
 ```bash
 pip install git+https://github.com/agentic-mcp-tools/memora.git
@@ -55,7 +55,7 @@ pip install "memora[local]" @ git+https://github.com/agentic-mcp-tools/memora.gi
 </details>
 
 <details>
-<summary><strong>Usage</strong></summary>
+<summary><big><strong>Usage</strong></big></summary>
 
 The server runs automatically when configured in Claude Code. Manual invocation:
 
@@ -73,7 +73,7 @@ memora-server --transport streamable-http --host 127.0.0.1 --port 8080
 </details>
 
 <details>
-<summary><strong>Configuration</strong></summary>
+<summary><big><strong>Configuration</strong></big></summary>
 
 ### Claude Code
 
@@ -136,7 +136,7 @@ Add to `~/.codex/config.toml`:
 </details>
 
 <details>
-<summary><strong>Environment Variables</strong></summary>
+<summary><big><strong>Environment Variables</strong></big></summary>
 
 | Variable               | Description                                                                 |
 |------------------------|-----------------------------------------------------------------------------|
@@ -163,7 +163,7 @@ Add to `~/.codex/config.toml`:
 </details>
 
 <details>
-<summary><strong>Semantic Search & Embeddings</strong></summary>
+<summary><big><strong>Semantic Search & Embeddings</strong></big></summary>
 
 Memora supports three embedding backends:
 
@@ -190,7 +190,7 @@ memory_rebuild_crossrefs
 </details>
 
 <details>
-<summary><strong>Live Graph Server</strong></summary>
+<summary><big><strong>Live Graph Server</strong></big></summary>
 
 A built-in HTTP server starts automatically with the MCP server, serving an interactive knowledge graph visualization.
 
@@ -243,7 +243,7 @@ Node size reflects connection count.
 </details>
 
 <details>
-<summary><strong>Neovim Integration</strong></summary>
+<summary><big><strong>Neovim Integration</strong></big></summary>
 
 Browse memories directly in Neovim with Telescope. Copy the plugin to your config:
 
@@ -259,7 +259,7 @@ Requires: `telescope.nvim`, `plenary.nvim`, and `memora` installed in your Pytho
 </details>
 
 <details>
-<summary><strong>Knowledge Graph Export (Optional)</strong></summary>
+<summary><big><strong>Knowledge Graph Export (Optional)</strong></big></summary>
 
 For offline viewing, export memories as a static HTML file:
 
@@ -272,7 +272,7 @@ This is optional - the Live Graph Server provides the same visualization with re
 </details>
 
 <details>
-<summary><strong>LLM Deduplication</strong></summary>
+<summary><big><strong>LLM Deduplication</strong></big></summary>
 
 Find and merge duplicate memories using AI-powered semantic comparison:
 
@@ -295,7 +295,7 @@ Works with any OpenAI-compatible API (OpenAI, OpenRouter, Azure, etc.) via `OPEN
 </details>
 
 <details>
-<summary><strong>Memory Automation Tools</strong></summary>
+<summary><big><strong>Memory Automation Tools</strong></big></summary>
 
 Structured tools for common memory types:
 
@@ -313,7 +313,7 @@ memory_create_section(content="Architecture", section="docs", subsection="api")
 </details>
 
 <details>
-<summary><strong>Memory Linking</strong></summary>
+<summary><big><strong>Memory Linking</strong></big></summary>
 
 Manage relationships between memories:
 
