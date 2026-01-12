@@ -1,4 +1,4 @@
-<h1 align="center"><img src="media/memora_new.gif" width="60" alt="Memora Logo" align="absmiddle"> <font size="7">Memora</font></h1>
+<h1 align="center"><img src="media/memora_new.gif" width="60" alt="Memora Logo" align="absmiddle"> Memora</h1>
 
 <p align="center">
 <b>Give your AI agents persistent memory</b><br>
@@ -16,10 +16,11 @@ A lightweight MCP server for semantic memory storage, knowledge graphs, and cros
 </p>
 
 <p align="center">
-<b><a href="#features">Features</a></b> · <b><a href="#install">Install</a></b> · <b><a href="#usage">Usage</a></b> · <b><a href="#claude-code-config">Config</a></b> · <b><a href="#live-graph-server">Live Graph</a></b> · <b><a href="#semantic-search--embeddings">Semantic Search</a></b> · <b><a href="#llm-deduplication">LLM Deduplication</a></b>
+<b><a href="#features">Features</a></b> · <b><a href="#install">Install</a></b> · <b><a href="#usage">Usage</a></b> · <b><a href="#configuration">Config</a></b> · <b><a href="#live-graph-server">Live Graph</a></b> · <b><a href="#semantic-search--embeddings">Semantic Search</a></b> · <b><a href="#llm-deduplication">LLM Deduplication</a></b>
 </p>
 
-## Features
+<details open>
+<summary><strong>Features</strong></summary>
 
 - 💾 **Persistent Storage** - SQLite-backed database with optional cloud sync (S3, GCS, Azure)
 - 🔍 **Semantic Search** - Vector embeddings (TF-IDF, sentence-transformers, or OpenAI)
@@ -35,7 +36,10 @@ A lightweight MCP server for semantic memory storage, knowledge graphs, and cros
 - 🌐 **Live Graph Server** - Auto-starts HTTP server for remote access via SSH
 - 📊 **Statistics & Analytics** - Tag usage, trends, and connection insights
 
-## Install
+</details>
+
+<details>
+<summary><strong>Install</strong></summary>
 
 ```bash
 pip install git+https://github.com/agentic-mcp-tools/memora.git
@@ -48,7 +52,10 @@ Includes cloud storage (S3/R2) and OpenAI embeddings out of the box.
 pip install "memora[local]" @ git+https://github.com/agentic-mcp-tools/memora.git
 ```
 
-## Usage
+</details>
+
+<details>
+<summary><strong>Usage</strong></summary>
 
 The server runs automatically when configured in Claude Code. Manual invocation:
 
@@ -63,11 +70,16 @@ memora-server --graph-port 8765
 memora-server --transport streamable-http --host 127.0.0.1 --port 8080
 ```
 
-## Claude Code Config
+</details>
+
+<details>
+<summary><strong>Configuration</strong></summary>
+
+### Claude Code
 
 Add to `.mcp.json` in your project root:
 
-### Local DB
+**Local DB:**
 ```json
 {
   "mcpServers": {
@@ -84,7 +96,7 @@ Add to `.mcp.json` in your project root:
 }
 ```
 
-### Cloud DB (S3/R2)
+**Cloud DB (S3/R2):**
 ```json
 {
   "mcpServers": {
@@ -104,7 +116,7 @@ Add to `.mcp.json` in your project root:
 }
 ```
 
-## Codex CLI Config
+### Codex CLI
 
 Add to `~/.codex/config.toml`:
 
@@ -121,7 +133,10 @@ Add to `~/.codex/config.toml`:
   }
 ```
 
-## Environment Variables
+</details>
+
+<details>
+<summary><strong>Environment Variables</strong></summary>
 
 | Variable               | Description                                                                 |
 |------------------------|-----------------------------------------------------------------------------|
@@ -145,7 +160,10 @@ Add to `~/.codex/config.toml`:
 | `AWS_ENDPOINT_URL`     | S3-compatible endpoint for R2/MinIO                                        |
 | `R2_PUBLIC_DOMAIN`     | Public domain for R2 image URLs                                            |
 
-## Semantic Search & Embeddings
+</details>
+
+<details>
+<summary><strong>Semantic Search & Embeddings</strong></summary>
 
 Memora supports three embedding backends:
 
@@ -169,7 +187,10 @@ memory_rebuild_embeddings
 memory_rebuild_crossrefs
 ```
 
-## Live Graph Server
+</details>
+
+<details>
+<summary><strong>Live Graph Server</strong></summary>
 
 A built-in HTTP server starts automatically with the MCP server, serving an interactive knowledge graph visualization.
 
@@ -219,7 +240,10 @@ To disable: add `"--no-graph"` to args in your MCP config.
 
 Node size reflects connection count.
 
-## Neovim Integration
+</details>
+
+<details>
+<summary><strong>Neovim Integration</strong></summary>
 
 Browse memories directly in Neovim with Telescope. Copy the plugin to your config:
 
@@ -232,7 +256,10 @@ cp nvim/memora.lua ~/.config/nvim/lua/kickstart/plugins/
 
 Requires: `telescope.nvim`, `plenary.nvim`, and `memora` installed in your Python environment.
 
-## Knowledge Graph Export (Optional)
+</details>
+
+<details>
+<summary><strong>Knowledge Graph Export (Optional)</strong></summary>
 
 For offline viewing, export memories as a static HTML file:
 
@@ -242,7 +269,10 @@ memory_export_graph(output_path="~/memories_graph.html", min_score=0.25)
 
 This is optional - the Live Graph Server provides the same visualization with real-time updates.
 
-## LLM Deduplication
+</details>
+
+<details>
+<summary><strong>LLM Deduplication</strong></summary>
 
 Find and merge duplicate memories using AI-powered semantic comparison:
 
@@ -262,7 +292,10 @@ memory_merge(source_id=123, target_id=456, merge_strategy="append")
 
 Works with any OpenAI-compatible API (OpenAI, OpenRouter, Azure, etc.) via `OPENAI_BASE_URL`.
 
-## Memory Automation Tools
+</details>
+
+<details>
+<summary><strong>Memory Automation Tools</strong></summary>
 
 Structured tools for common memory types:
 
@@ -277,7 +310,10 @@ memory_create_issue(content="Bug in login flow", status="open", severity="major"
 memory_create_section(content="Architecture", section="docs", subsection="api")
 ```
 
-## Memory Linking
+</details>
+
+<details>
+<summary><strong>Memory Linking</strong></summary>
 
 Manage relationships between memories:
 
@@ -296,3 +332,5 @@ memory_boost(memory_id=42, boost_amount=0.5)
 # Detect clusters of related memories
 memory_clusters(min_cluster_size=2, min_score=0.3)
 ```
+
+</details>
