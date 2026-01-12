@@ -35,8 +35,7 @@ A lightweight MCP server for semantic memory storage, knowledge graphs, and cros
 - 🌐 **Live Graph Server** - Auto-starts HTTP server for remote access via SSH
 - 📊 **Statistics & Analytics** - Tag usage, trends, and connection insights
 
-<details>
-<summary><big><strong>Install</strong></big></summary>
+## Install
 
 ```bash
 pip install git+https://github.com/agentic-mcp-tools/memora.git
@@ -48,8 +47,6 @@ Includes cloud storage (S3/R2) and OpenAI embeddings out of the box.
 # Optional: local embeddings (offline, ~2GB for PyTorch)
 pip install "memora[local]" @ git+https://github.com/agentic-mcp-tools/memora.git
 ```
-
-</details>
 
 <details>
 <summary><big><strong>Usage</strong></big></summary>
