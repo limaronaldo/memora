@@ -719,6 +719,27 @@ function switchTab(tabName) {
     document.getElementById('tab-timeline').classList.toggle('active', tabName === 'timeline');
     if (tabName === 'timeline') {
         populateTimelineList();
+    } else if (tabName === 'detail' && currentPanelMemoryId) {
+        // Load the current memory details when switching to detail tab
+        loadMemoryToPanel(currentPanelMemoryId);
+    }
+}
+
+function loadMemoryToPanel(memId) {
+    memId = parseInt(memId, 10);
+    if (typeof memoriesData !== 'undefined' && memoriesData[memId]) {
+        showPanel(memoriesData[memId]);
+    } else if (typeof memoryCache !== 'undefined' && memoryCache[memId]) {
+        showPanel(memoryCache[memId]);
+    } else {
+        fetch('/api/memories/' + memId)
+            .then(function(r) { return r.json(); })
+            .then(function(mem) {
+                if (!mem.error) {
+                    if (typeof memoryCache !== 'undefined') memoryCache[memId] = mem;
+                    showPanel(mem);
+                }
+            });
     }
 }
 
@@ -774,6 +795,8 @@ function highlightMemoryInGraph(memId) {
     if (typeof focusOnNode !== 'undefined') {
         focusOnNode(memId);
     }
+    // Store as current panel memory so switching to Details tab shows correct memory
+    currentPanelMemoryId = memId;
     // Update selected state in timeline
     document.querySelectorAll('#timeline-list .memory-item').forEach(function(el) {
         el.classList.toggle('selected', parseInt(el.dataset.id, 10) === memId);
@@ -972,7 +995,7 @@ Duplicates ({len(duplicate_ids)})</div></div>'''
     <div id="panel">
         <span class="close" onclick="closePanel()">&times;</span>
         <div id="panel-tabs">
-            <span class="tab active" onclick="switchTab('detail')">Detail</span>
+            <span class="tab active" onclick="switchTab('detail')">Details</span>
             <span class="tab" onclick="switchTab('timeline')">Timeline</span>
         </div>
         <div id="tab-detail" class="active">
@@ -1085,7 +1108,7 @@ def get_spa_html(version: str = "") -> str:
     <div id="panel">
         <span class="close" onclick="closePanel()">&times;</span>
         <div id="panel-tabs">
-            <span class="tab active" onclick="switchTab('detail')">Detail</span>
+            <span class="tab active" onclick="switchTab('detail')">Details</span>
             <span class="tab" onclick="switchTab('timeline')">Timeline</span>
         </div>
         <div id="tab-detail" class="active">
