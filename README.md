@@ -1,28 +1,39 @@
-<h1><img src="media/memora_new.gif" width="36" alt="Memora Logo">&nbsp;Memora</h1>
+<h1 align="center"><img src="media/memora_new.gif" width="40" alt="Memora Logo" style="vertical-align: middle;">&nbsp;Memora</h1>
 
-[![Version](https://img.shields.io/github/v/tag/agentic-mcp-tools/memora?label=version&color=blue)](https://github.com/agentic-mcp-tools/memora/releases)
-[![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
-[![GitHub stars](https://img.shields.io/github/stars/agentic-mcp-tools/memora?style=social)](https://github.com/agentic-mcp-tools/memora/stargazers)
+<p align="center">
+<b>Give your AI agents persistent memory</b><br>
+A lightweight MCP server for semantic memory storage, knowledge graphs, and cross-session context.
+</p>
 
-A lightweight Model Context Protocol (MCP) server that persists shared memories in SQLite. Compatible with Claude Code, Codex CLI, and other MCP-aware clients.
+<p align="center">
+<a href="https://github.com/agentic-mcp-tools/memora/releases"><img src="https://img.shields.io/github/v/tag/agentic-mcp-tools/memora?label=version&color=blue" alt="Version"></a>
+<a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green" alt="License"></a>
+<a href="https://github.com/thedotmack/awesome-claude-code"><img src="https://awesome.re/mentioned-badge.svg" alt="Mentioned in Awesome Claude Code"></a>
+</p>
 
+<p align="center">
 <img src="media/demo.gif" alt="Memora Demo" width="800">
+</p>
+
+<p align="center">
+<b><a href="#features">Features</a></b> · <b><a href="#install">Install</a></b> · <b><a href="#usage">Usage</a></b> · <b><a href="#claude-code-config">Config</a></b> · <b><a href="#live-graph-server">Live Graph</a></b> · <b><a href="#semantic-search--embeddings">Semantic Search</a></b> · <b><a href="#llm-deduplication">LLM Deduplication</a></b>
+</p>
 
 ## Features
 
-- **Persistent Storage** - SQLite-backed database with optional cloud sync (S3, GCS, Azure)
-- **Semantic Search** - Vector embeddings (TF-IDF, sentence-transformers, or OpenAI)
-- **LLM Deduplication** - Find and merge duplicate memories with AI-powered comparison
-- **Memory Automation** - Structured tools for TODOs, issues, and section placeholders
-- **Memory Linking** - Typed edges, importance boosting, and cluster detection
-- **Event Notifications** - Poll-based system for inter-agent communication
-- **Advanced Queries** - Full-text search, date ranges, tag filters (AND/OR/NOT)
-- **Cross-references** - Auto-linked related memories based on similarity
-- **Hierarchical Organization** - Explore memories by section/subsection
-- **Export/Import** - Backup and restore with merge strategies
-- **Knowledge Graph** - Interactive HTML visualization with Mermaid diagram rendering
-- **Live Graph Server** - Auto-starts HTTP server for remote access via SSH
-- **Statistics & Analytics** - Tag usage, trends, and connection insights
+- 💾 **Persistent Storage** - SQLite-backed database with optional cloud sync (S3, GCS, Azure)
+- 🔍 **Semantic Search** - Vector embeddings (TF-IDF, sentence-transformers, or OpenAI)
+- 🤖 **LLM Deduplication** - Find and merge duplicate memories with AI-powered comparison
+- ⚡ **Memory Automation** - Structured tools for TODOs, issues, and section placeholders
+- 🔗 **Memory Linking** - Typed edges, importance boosting, and cluster detection
+- 📡 **Event Notifications** - Poll-based system for inter-agent communication
+- 🎯 **Advanced Queries** - Full-text search, date ranges, tag filters (AND/OR/NOT)
+- 🔀 **Cross-references** - Auto-linked related memories based on similarity
+- 📂 **Hierarchical Organization** - Explore memories by section/subsection
+- 📦 **Export/Import** - Backup and restore with merge strategies
+- 🕸️ **Knowledge Graph** - Interactive HTML visualization with Mermaid diagram rendering
+- 🌐 **Live Graph Server** - Auto-starts HTTP server for remote access via SSH
+- 📊 **Statistics & Analytics** - Tag usage, trends, and connection insights
 
 ## Install
 
