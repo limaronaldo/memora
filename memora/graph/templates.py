@@ -801,22 +801,14 @@ function highlightMemoryInGraph(memId) {
     document.querySelectorAll('#timeline-list .memory-item').forEach(function(el) {
         el.classList.toggle('selected', parseInt(el.dataset.id, 10) === memId);
     });
-    // Highlight the memory's section in the left hierarchy pane
-    var mem = (typeof memoriesData !== 'undefined' && memoriesData[memId]) ? memoriesData[memId] :
-              (typeof memoryCache !== 'undefined' && memoryCache[memId]) ? memoryCache[memId] : null;
-    if (mem) {
-        highlightMemorySection(mem);
-    } else {
-        // Fetch memory data if not in cache
-        fetch('/api/memories/' + memId)
-            .then(function(r) { return r.json(); })
-            .then(function(mem) {
-                if (!mem.error) {
-                    if (typeof memoryCache !== 'undefined') memoryCache[memId] = mem;
-                    highlightMemorySection(mem);
-                }
-            });
-    }
+    // Fetch fresh data and highlight section (no cache for data integrity)
+    fetch('/api/memories/' + memId)
+        .then(function(r) { return r.json(); })
+        .then(function(mem) {
+            if (!mem.error) {
+                highlightMemorySection(mem);
+            }
+        });
 }
 
 function highlightMemorySection(mem) {
