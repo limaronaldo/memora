@@ -763,6 +763,10 @@ function populateTimelineList() {
 }
 
 function renderTimelineList(memories) {
+    // Filter out section placeholders
+    memories = memories.filter(function(mem) {
+        return !(mem.metadata && mem.metadata.type === 'section');
+    });
     memories.sort(function(a, b) {
         return new Date(b.created) - new Date(a.created);
     });
