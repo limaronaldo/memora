@@ -768,6 +768,243 @@ class CloudSQLiteBackend(StorageBackend):
             self.sync_after_write()
 
 
+class D1Row:
+    """A dict-like row that supports both index and key access (like sqlite3.Row)."""
+
+    def __init__(self, data: dict, columns: list):
+        self._data = data
+        self._columns = columns
+
+    def __getitem__(self, key):
+        if isinstance(key, int):
+            return self._data[self._columns[key]]
+        return self._data[key]
+
+    def __iter__(self):
+        return iter(self._data.values())
+
+    def keys(self):
+        return self._columns
+
+    def values(self):
+        return [self._data[c] for c in self._columns]
+
+    def items(self):
+        return [(c, self._data[c]) for c in self._columns]
+
+    def __repr__(self):
+        return f"D1Row({self._data})"
+
+
+class D1Cursor:
+    """A cursor-like object for D1 query results."""
+
+    def __init__(self, results: list, columns: list, lastrowid: int = 0, rowcount: int = 0):
+        self._results = results
+        self._columns = columns
+        self._index = 0
+        self.lastrowid = lastrowid
+        self.rowcount = rowcount
+        self.description = [(col, None, None, None, None, None, None) for col in columns] if columns else None
+
+    def fetchone(self):
+        if self._index >= len(self._results):
+            return None
+        row = self._results[self._index]
+        self._index += 1
+        return D1Row(row, self._columns)
+
+    def fetchall(self):
+        rows = self._results[self._index:]
+        self._index = len(self._results)
+        return [D1Row(row, self._columns) for row in rows]
+
+    def fetchmany(self, size=None):
+        if size is None:
+            size = 1
+        rows = self._results[self._index:self._index + size]
+        self._index += len(rows)
+        return [D1Row(row, self._columns) for row in rows]
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        row = self.fetchone()
+        if row is None:
+            raise StopIteration
+        return row
+
+    def close(self):
+        pass
+
+
+class D1Connection:
+    """A connection-like object that talks to Cloudflare D1 via HTTP API."""
+
+    def __init__(self, account_id: str, database_id: str, api_token: str):
+        self.account_id = account_id
+        self.database_id = database_id
+        self.api_token = api_token
+        self.base_url = f"https://api.cloudflare.com/client/v4/accounts/{account_id}/d1/database/{database_id}"
+        self.row_factory = None
+        self._pending_statements = []
+
+    def _execute_api(self, sql: str, params: tuple = None) -> dict:
+        """Execute SQL via D1 HTTP API."""
+        import urllib.request
+        import urllib.error
+
+        url = f"{self.base_url}/query"
+
+        body = {"sql": sql}
+        if params:
+            # D1 expects positional params as a list
+            body["params"] = list(params)
+
+        data = json.dumps(body).encode("utf-8")
+
+        req = urllib.request.Request(
+            url,
+            data=data,
+            headers={
+                "Authorization": f"Bearer {self.api_token}",
+                "Content-Type": "application/json",
+            },
+            method="POST",
+        )
+
+        try:
+            with urllib.request.urlopen(req, timeout=30) as resp:
+                result = json.loads(resp.read().decode())
+        except urllib.error.HTTPError as e:
+            error_body = e.read().decode() if e.fp else str(e)
+            raise RuntimeError(f"D1 API error ({e.code}): {error_body}")
+
+        if not result.get("success"):
+            errors = result.get("errors", [])
+            error_msg = errors[0].get("message") if errors else "Unknown error"
+            raise RuntimeError(f"D1 query failed: {error_msg}")
+
+        return result
+
+    def execute(self, sql: str, params: tuple = None) -> D1Cursor:
+        """Execute a single SQL statement."""
+        result = self._execute_api(sql, params)
+
+        # D1 returns results in a nested structure
+        query_result = result.get("result", [{}])[0]
+        rows = query_result.get("results", [])
+        meta = query_result.get("meta", {})
+
+        # Extract columns from first row if available
+        columns = list(rows[0].keys()) if rows else []
+
+        return D1Cursor(
+            results=rows,
+            columns=columns,
+            lastrowid=meta.get("last_row_id", 0),
+            rowcount=meta.get("changes", len(rows)),
+        )
+
+    def executemany(self, sql: str, params_list: list) -> D1Cursor:
+        """Execute SQL for multiple parameter sets."""
+        # D1 doesn't have native executemany, so we batch execute
+        lastrowid = 0
+        total_changes = 0
+
+        for params in params_list:
+            result = self._execute_api(sql, params)
+            query_result = result.get("result", [{}])[0]
+            meta = query_result.get("meta", {})
+            lastrowid = meta.get("last_row_id", lastrowid)
+            total_changes += meta.get("changes", 0)
+
+        return D1Cursor(results=[], columns=[], lastrowid=lastrowid, rowcount=total_changes)
+
+    def executescript(self, sql_script: str) -> D1Cursor:
+        """Execute multiple SQL statements separated by semicolons."""
+        # Split by semicolons and execute each
+        statements = [s.strip() for s in sql_script.split(";") if s.strip()]
+        lastrowid = 0
+        total_changes = 0
+
+        for stmt in statements:
+            result = self._execute_api(stmt)
+            query_result = result.get("result", [{}])[0]
+            meta = query_result.get("meta", {})
+            lastrowid = meta.get("last_row_id", lastrowid)
+            total_changes += meta.get("changes", 0)
+
+        return D1Cursor(results=[], columns=[], lastrowid=lastrowid, rowcount=total_changes)
+
+    def cursor(self) -> "D1Connection":
+        """Return self as cursor (D1Connection acts as both)."""
+        return self
+
+    def commit(self):
+        """No-op - D1 auto-commits each query."""
+        pass
+
+    def rollback(self):
+        """No-op - D1 doesn't support transactions via HTTP API."""
+        pass
+
+    def close(self):
+        """No-op - HTTP connections are stateless."""
+        pass
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        self.close()
+
+
+class D1Backend(StorageBackend):
+    """Cloudflare D1 backend - uses D1 as primary database via HTTP API.
+
+    This backend:
+    - Executes all queries directly against D1 (no local caching)
+    - Uses R2 for media/image storage only
+    - No sync needed - D1 is the source of truth
+    """
+
+    def __init__(self, account_id: str, database_id: str, api_token: str):
+        """Initialize D1 backend.
+
+        Args:
+            account_id: Cloudflare account ID
+            database_id: D1 database ID
+            api_token: Cloudflare API token with D1 permissions
+        """
+        self.account_id = account_id
+        self.database_id = database_id
+        self.api_token = api_token
+
+        logger.info(f"Initialized D1Backend: database={database_id}")
+
+    def connect(self, *, check_same_thread: bool = True) -> D1Connection:
+        """Return a D1 connection."""
+        return D1Connection(self.account_id, self.database_id, self.api_token)
+
+    def sync_before_use(self) -> None:
+        """No-op - D1 is always up to date."""
+        pass
+
+    def sync_after_write(self) -> None:
+        """No-op - D1 writes are immediate."""
+        pass
+
+    def get_info(self) -> dict:
+        """Return backend information."""
+        return {
+            "backend_type": "d1",
+            "account_id": self.account_id,
+            "database_id": self.database_id,
+        }
+
+
 def parse_backend_uri(uri: str) -> StorageBackend:
     """Parse a storage URI and return the appropriate backend.
 
@@ -775,6 +1012,7 @@ def parse_backend_uri(uri: str) -> StorageBackend:
     - file:///path/to/db.sqlite (local SQLite)
     - /path/to/db.sqlite (local SQLite)
     - s3://bucket/path/to/db.sqlite (S3-compatible cloud storage)
+    - d1://account_id/database_id (Cloudflare D1)
 
     Args:
         uri: Storage URI string
@@ -782,7 +1020,29 @@ def parse_backend_uri(uri: str) -> StorageBackend:
     Returns:
         StorageBackend instance
     """
-    if uri.startswith("s3://"):
+    if uri.startswith("d1://"):
+        # D1 URI format: d1://account_id/database_id
+        # API token from environment: CLOUDFLARE_API_TOKEN or CF_API_TOKEN
+        parts = uri[5:].split("/", 1)
+        if len(parts) != 2:
+            raise ValueError(
+                f"Invalid D1 URI format: {uri}\n"
+                "Expected: d1://account_id/database_id"
+            )
+
+        account_id, database_id = parts
+
+        api_token = os.getenv("CLOUDFLARE_API_TOKEN") or os.getenv("CF_API_TOKEN")
+        if not api_token:
+            raise ValueError(
+                "D1 backend requires CLOUDFLARE_API_TOKEN or CF_API_TOKEN environment variable.\n"
+                "Create a token at: https://dash.cloudflare.com/profile/api-tokens\n"
+                "Required permissions: D1 Edit"
+            )
+
+        return D1Backend(account_id=account_id, database_id=database_id, api_token=api_token)
+
+    elif uri.startswith("s3://"):
         # Parse cloud storage options from environment
         encrypt = os.getenv("MEMORA_CLOUD_ENCRYPT", "").lower() in ("1", "true", "yes")
         compress = os.getenv("MEMORA_CLOUD_COMPRESS", "").lower() in ("1", "true", "yes")

@@ -42,6 +42,7 @@ from .storage import (
     detect_clusters,
     EDGE_TYPES,
 )
+from .cloud_sync import schedule_sync as _schedule_cloud_graph_sync
 
 # Content type inference patterns
 TYPE_PATTERNS: List[tuple[str, str]] = [
@@ -125,6 +126,7 @@ def _with_connection(func=None, *, writes=False):
                 # Only sync to cloud after write operations
                 if writes:
                     sync_to_cloud()
+                    _schedule_cloud_graph_sync()
                 return result
             finally:
                 conn.close()

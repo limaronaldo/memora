@@ -90,7 +90,26 @@ Add to `.mcp.json` in your project root:
 }
 ```
 
-**Cloud DB (S3/R2):**
+**Cloud DB (Cloudflare D1) - Recommended:**
+```json
+{
+  "mcpServers": {
+    "memora": {
+      "command": "memora-server",
+      "args": ["--no-graph"],
+      "env": {
+        "MEMORA_STORAGE_URI": "d1://<account-id>/<database-id>",
+        "CLOUDFLARE_API_TOKEN": "<your-api-token>",
+        "MEMORA_ALLOW_ANY_TAG": "1"
+      }
+    }
+  }
+}
+```
+
+With D1, use `--no-graph` to disable the local visualization server. Instead, use the hosted graph at your Cloudflare Pages URL (see [Cloud Graph](#cloud-graph)).
+
+**Cloud DB (S3/R2) - Sync mode:**
 ```json
 {
   "mcpServers": {
@@ -135,7 +154,8 @@ Add to `~/.codex/config.toml`:
 | Variable               | Description                                                                 |
 |------------------------|-----------------------------------------------------------------------------|
 | `MEMORA_DB_PATH`       | Local SQLite database path (default: `~/.local/share/memora/memories.db`)  |
-| `MEMORA_STORAGE_URI`   | Cloud storage URI for S3/R2 (e.g., `s3://bucket/memories.db`)              |
+| `MEMORA_STORAGE_URI`   | Storage URI: `d1://<account>/<db-id>` (D1) or `s3://bucket/memories.db` (S3/R2) |
+| `CLOUDFLARE_API_TOKEN` | API token for D1 database access (required for `d1://` URI)                |
 | `MEMORA_CLOUD_ENCRYPT` | Encrypt database before uploading to cloud (`true`/`false`)                |
 | `MEMORA_CLOUD_COMPRESS`| Compress database before uploading to cloud (`true`/`false`)               |
 | `MEMORA_CACHE_DIR`     | Local cache directory for cloud-synced database                            |
@@ -262,6 +282,58 @@ memory_export_graph(output_path="~/memories_graph.html", min_score=0.25)
 ```
 
 This is optional - the Live Graph Server provides the same visualization with real-time updates.
+
+</details>
+
+<details id="cloud-graph">
+<summary><big><big><strong>Cloud Graph (Recommended for D1)</strong></big></big></summary>
+
+When using Cloudflare D1 as your database, the graph visualization is hosted on Cloudflare Pages - no local server needed.
+
+**Benefits:**
+- Access from anywhere (no SSH tunneling)
+- Real-time updates via WebSocket
+- Multi-database support via `?db=` parameter
+- Secure access with Cloudflare Zero Trust
+
+**Setup:**
+
+1. **Create D1 database:**
+   ```bash
+   npx wrangler d1 create memora-graph
+   npx wrangler d1 execute memora-graph --file=memora-graph/schema.sql
+   ```
+
+2. **Deploy Pages:**
+   ```bash
+   cd memora-graph
+   npx wrangler pages deploy ./public --project-name=memora-graph
+   ```
+
+3. **Configure bindings** in Cloudflare Dashboard:
+   - Pages → memora-graph → Settings → Bindings
+   - Add D1: `DB_MEMORA` → your database
+   - Add R2: `R2_MEMORA` → your bucket (for images)
+
+4. **Configure MCP** with D1 URI:
+   ```json
+   {
+     "env": {
+       "MEMORA_STORAGE_URI": "d1://<account-id>/<database-id>",
+       "CLOUDFLARE_API_TOKEN": "<your-token>"
+     }
+   }
+   ```
+
+**Access:** `https://memora-graph.pages.dev`
+
+**Secure with Zero Trust:**
+1. Cloudflare Dashboard → Zero Trust → Access → Applications
+2. Add application for `memora-graph.pages.dev`
+3. Create policy with allowed emails
+4. Pages → Settings → Enable Access Policy
+
+See [`memora-graph/`](memora-graph/) for detailed setup and multi-database configuration.
 
 </details>
 
