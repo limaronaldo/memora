@@ -626,6 +626,7 @@ async def memory_create(
     except Exception:
         pass  # Don't fail on type inference errors
 
+    _schedule_cloud_graph_sync()
     return result
 
 
@@ -690,6 +691,7 @@ async def memory_create_issue(
     except ValueError as exc:
         return {"error": "invalid_input", "message": str(exc)}
 
+    _schedule_cloud_graph_sync()
     return {"memory": record}
 
 
@@ -750,6 +752,7 @@ async def memory_create_todo(
     except ValueError as exc:
         return {"error": "invalid_input", "message": str(exc)}
 
+    _schedule_cloud_graph_sync()
     return {"memory": record}
 
 
@@ -791,6 +794,7 @@ async def memory_create_section(
     except ValueError as exc:
         return {"error": "invalid_input", "message": str(exc)}
 
+    _schedule_cloud_graph_sync()
     return {"memory": record}
 
 
@@ -887,6 +891,7 @@ async def memory_create_batch(entries: List[Dict[str, Any]]) -> Dict[str, Any]:
         records = _create_memories(entries)
     except ValueError as exc:
         return {"error": "invalid_batch", "message": str(exc)}
+    _schedule_cloud_graph_sync()
     return {"count": len(records), "memories": records}
 
 
@@ -894,6 +899,7 @@ async def memory_create_batch(entries: List[Dict[str, Any]]) -> Dict[str, Any]:
 async def memory_delete_batch(ids: List[int]) -> Dict[str, Any]:
     """Delete multiple memories by id."""
     deleted = _delete_memories(ids)
+    _schedule_cloud_graph_sync()
     return {"deleted": deleted}
 
 
@@ -932,6 +938,7 @@ async def memory_update(
         return {"error": "invalid_input", "message": str(exc)}
     if not record:
         return {"error": "not_found", "id": memory_id}
+    _schedule_cloud_graph_sync()
     return {"memory": record}
 
 
@@ -939,6 +946,7 @@ async def memory_update(
 async def memory_delete(memory_id: int) -> Dict[str, Any]:
     """Delete a memory by id."""
     if _delete_memory(memory_id):
+        _schedule_cloud_graph_sync()
         return {"status": "deleted", "id": memory_id}
     return {"error": "not_found", "id": memory_id}
 
@@ -1128,6 +1136,7 @@ async def memory_boost(
     record = _boost_memory(memory_id, boost_amount)
     if not record:
         return {"error": "not_found", "id": memory_id}
+    _schedule_cloud_graph_sync()
     return {"memory": record, "boosted_by": boost_amount}
 
 
@@ -1171,7 +1180,9 @@ async def memory_link(
         Dict with created links and their types
     """
     try:
-        return _add_link(from_id, to_id, edge_type, bidirectional)
+        result = _add_link(from_id, to_id, edge_type, bidirectional)
+        _schedule_cloud_graph_sync()
+        return result
     except ValueError as e:
         return {"error": "invalid_input", "message": str(e)}
 
@@ -1192,7 +1203,9 @@ async def memory_unlink(
     Returns:
         Dict with removed links
     """
-    return _remove_link(from_id, to_id, bidirectional)
+    result = _remove_link(from_id, to_id, bidirectional)
+    _schedule_cloud_graph_sync()
+    return result
 
 
 @mcp.tool()
@@ -1365,6 +1378,7 @@ async def memory_merge(
         delete_memory(conn, source_id)
         conn.commit()
 
+    _schedule_cloud_graph_sync()
     return {
         "merged": True,
         "target_id": target_id,
@@ -1602,6 +1616,7 @@ async def memory_import(
         result = _import_memories(data, strategy)
     except ValueError as exc:
         return {"error": "invalid_input", "message": str(exc)}
+    _schedule_cloud_graph_sync()
     return result
 
 
