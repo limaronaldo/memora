@@ -719,6 +719,26 @@ function switchTab(tabName) {
     document.getElementById('tab-timeline').classList.toggle('active', tabName === 'timeline');
     if (tabName === 'timeline') {
         populateTimelineList();
+    } else if (tabName === 'detail' && currentPanelMemoryId) {
+        loadMemoryToPanel(currentPanelMemoryId);
+    }
+}
+
+function loadMemoryToPanel(memId) {
+    memId = parseInt(memId, 10);
+    if (typeof memoriesData !== 'undefined' && memoriesData[memId]) {
+        showPanel(memoriesData[memId]);
+    } else if (typeof memoryCache !== 'undefined' && memoryCache[memId]) {
+        showPanel(memoryCache[memId]);
+    } else {
+        fetch('/api/memories/' + memId)
+            .then(function(r) { return r.json(); })
+            .then(function(mem) {
+                if (!mem.error) {
+                    if (typeof memoryCache !== 'undefined') memoryCache[memId] = mem;
+                    showPanel(mem);
+                }
+            });
     }
 }
 
@@ -743,9 +763,14 @@ function populateTimelineList() {
 }
 
 function renderTimelineList(memories) {
+    // Filter out section placeholders
+    memories = memories.filter(function(mem) {
+        return !(mem.metadata && mem.metadata.type === 'section');
+    });
     memories.sort(function(a, b) {
         return new Date(b.created) - new Date(a.created);
     });
+
     var html = memories.map(function(mem) {
         var headline = getMemoryHeadline(mem.content);
         var preview = getMemoryPreview(mem.content);
@@ -774,10 +799,65 @@ function highlightMemoryInGraph(memId) {
     if (typeof focusOnNode !== 'undefined') {
         focusOnNode(memId);
     }
+    // Store as current panel memory so switching to Details tab shows correct memory
+    currentPanelMemoryId = memId;
     // Update selected state in timeline
     document.querySelectorAll('#timeline-list .memory-item').forEach(function(el) {
         el.classList.toggle('selected', parseInt(el.dataset.id, 10) === memId);
     });
+    // Fetch fresh data and highlight section (no cache for data integrity)
+    fetch('/api/memories/' + memId)
+        .then(function(r) { return r.json(); })
+        .then(function(mem) {
+            if (!mem.error) {
+                highlightMemorySection(mem);
+            }
+        });
+}
+
+function highlightMemorySection(mem) {
+    // Clear previous selection
+    document.querySelectorAll('.subsection-item.selected, .section-item.selected, .legend-item.selected').forEach(function(el) { el.classList.remove('selected'); });
+    if (!mem.metadata) return;
+    // Handle issues
+    if (mem.metadata.type === 'issue' && mem.metadata.status) {
+        var statusKey = mem.metadata.status;
+        if (statusKey === 'closed' && mem.metadata.closed_reason) {
+            statusKey = 'closed:' + mem.metadata.closed_reason;
+        }
+        var issueEl = document.querySelector('.legend-item.issue-status[data-status="' + statusKey + '"]');
+        if (issueEl) issueEl.classList.add('selected');
+    }
+    // Handle TODOs
+    else if (mem.metadata.type === 'todo' && mem.metadata.status) {
+        var statusKey = mem.metadata.status;
+        if (statusKey === 'closed' && mem.metadata.closed_reason) {
+            statusKey = 'closed:' + mem.metadata.closed_reason;
+        }
+        var todoEl = document.querySelector('.legend-item.todo-status[data-todo-status="' + statusKey + '"]');
+        if (todoEl) todoEl.classList.add('selected');
+    }
+    // Handle regular memories with sections
+    else {
+        var section, subsection;
+        var hierarchy = mem.metadata.hierarchy;
+        if (hierarchy && hierarchy.path && hierarchy.path.length >= 1) {
+            section = hierarchy.path[0];
+            subsection = hierarchy.path.slice(1).join('/');
+        } else {
+            section = mem.metadata.section;
+            subsection = mem.metadata.subsection;
+        }
+        if (section) {
+            var sectionEl = document.querySelector('.section-item[data-section="' + section + '"]');
+            if (sectionEl) sectionEl.classList.add('selected');
+            if (subsection) {
+                var path = section + '/' + subsection;
+                var el = document.querySelector('.subsection-item[data-subsection="' + path + '"]');
+                if (el) el.classList.add('selected');
+            }
+        }
+    }
 }
 
 function showMemoryDetails(memId) {
@@ -859,48 +939,7 @@ function showPanel(mem) {
     document.getElementById('resize-handle').classList.add('active');
 
     // Highlight the memory's subsection/status in the left pane
-    document.querySelectorAll('.subsection-item.selected, .section-item.selected, .legend-item.selected').forEach(el => el.classList.remove('selected'));
-    if (mem.metadata) {
-        // Handle issues
-        if (mem.metadata.type === 'issue' && mem.metadata.status) {
-            var statusKey = mem.metadata.status;
-            if (statusKey === 'closed' && mem.metadata.closed_reason) {
-                statusKey = 'closed:' + mem.metadata.closed_reason;
-            }
-            var issueEl = document.querySelector('.legend-item.issue-status[data-status="' + statusKey + '"]');
-            if (issueEl) issueEl.classList.add('selected');
-        }
-        // Handle TODOs
-        else if (mem.metadata.type === 'todo' && mem.metadata.status) {
-            var statusKey = mem.metadata.status;
-            if (statusKey === 'closed' && mem.metadata.closed_reason) {
-                statusKey = 'closed:' + mem.metadata.closed_reason;
-            }
-            var todoEl = document.querySelector('.legend-item.todo-status[data-todo-status="' + statusKey + '"]');
-            if (todoEl) todoEl.classList.add('selected');
-        }
-        // Handle regular memories with sections
-        else {
-            var section, subsection;
-            var hierarchy = mem.metadata.hierarchy;
-            if (hierarchy && hierarchy.path && hierarchy.path.length >= 1) {
-                section = hierarchy.path[0];
-                subsection = hierarchy.path.slice(1).join('/');
-            } else {
-                section = mem.metadata.section;
-                subsection = mem.metadata.subsection;
-            }
-            if (section) {
-                var sectionEl = document.querySelector('.section-item[data-section="' + section + '"]');
-                if (sectionEl) sectionEl.classList.add('selected');
-                if (subsection) {
-                    var path = section + '/' + subsection;
-                    var el = document.querySelector('.subsection-item[data-subsection="' + path + '"]');
-                    if (el) el.classList.add('selected');
-                }
-            }
-        }
-    }
+    highlightMemorySection(mem);
     updateTimelinePosition();
 }
 """
@@ -972,7 +1011,7 @@ Duplicates ({len(duplicate_ids)})</div></div>'''
     <div id="panel">
         <span class="close" onclick="closePanel()">&times;</span>
         <div id="panel-tabs">
-            <span class="tab active" onclick="switchTab('detail')">Detail</span>
+            <span class="tab active" onclick="switchTab('detail')">Details</span>
             <span class="tab" onclick="switchTab('timeline')">Timeline</span>
         </div>
         <div id="tab-detail" class="active">
@@ -1085,7 +1124,7 @@ def get_spa_html(version: str = "") -> str:
     <div id="panel">
         <span class="close" onclick="closePanel()">&times;</span>
         <div id="panel-tabs">
-            <span class="tab active" onclick="switchTab('detail')">Detail</span>
+            <span class="tab active" onclick="switchTab('detail')">Details</span>
             <span class="tab" onclick="switchTab('timeline')">Timeline</span>
         </div>
         <div id="tab-detail" class="active">
@@ -1452,6 +1491,11 @@ def get_spa_html(version: str = "") -> str:
 
                     // Clear memory cache for fresh data
                     memoryCache = {{}};
+
+                    // Refresh timeline if on that tab
+                    if (currentTab === 'timeline') {{
+                        populateTimelineList();
+                    }}
                 }} catch (err) {{
                     console.error('Error refreshing graph:', err);
                 }}

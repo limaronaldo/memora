@@ -1,32 +1,39 @@
-<img src="media/memora.gif" width="60" align="left" alt="Memora Demo">
+<h1 align="center"><img src="media/memora_new.gif" width="60" alt="Memora Logo" align="absmiddle"> Memora</h1>
 
-# Memora
+<p align="center">
+<b>Give your AI agents persistent memory</b><br>
+A lightweight MCP server for semantic memory storage, knowledge graphs, and cross-session context.
+</p>
 
-[![Version](https://img.shields.io/github/v/tag/agentic-mcp-tools/memora?label=version&color=blue)](https://github.com/agentic-mcp-tools/memora/releases)
-[![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
-[![GitHub stars](https://img.shields.io/github/stars/agentic-mcp-tools/memora?style=social)](https://github.com/agentic-mcp-tools/memora/stargazers)
+<p align="center">
+<a href="https://github.com/agentic-mcp-tools/memora/releases"><img src="https://img.shields.io/github/v/tag/agentic-mcp-tools/memora?label=version&color=blue" alt="Version"></a>
+<a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green" alt="License"></a>
+<a href="https://github.com/thedotmack/awesome-claude-code"><img src="https://awesome.re/mentioned-badge.svg" alt="Mentioned in Awesome Claude Code"></a>
+</p>
 
-<br clear="left">
-
-A lightweight Model Context Protocol (MCP) server that persists shared memories in SQLite. Compatible with Claude Code, Codex CLI, and other MCP-aware clients.
-
+<p align="center">
 <img src="media/demo.gif" alt="Memora Demo" width="800">
+</p>
+
+<p align="center">
+<b><a href="#features">Features</a></b> · <b><a href="#install">Install</a></b> · <b><a href="#usage">Usage</a></b> · <b><a href="#configuration">Config</a></b> · <b><a href="#live-graph-server">Live Graph</a></b> · <b><a href="#semantic-search--embeddings">Semantic Search</a></b> · <b><a href="#llm-deduplication">LLM Deduplication</a></b>
+</p>
 
 ## Features
 
-- **Persistent Storage** - SQLite-backed database with optional cloud sync (S3, GCS, Azure)
-- **Semantic Search** - Vector embeddings (TF-IDF, sentence-transformers, or OpenAI)
-- **LLM Deduplication** - Find and merge duplicate memories with AI-powered comparison
-- **Memory Automation** - Structured tools for TODOs, issues, and section placeholders
-- **Memory Linking** - Typed edges, importance boosting, and cluster detection
-- **Event Notifications** - Poll-based system for inter-agent communication
-- **Advanced Queries** - Full-text search, date ranges, tag filters (AND/OR/NOT)
-- **Cross-references** - Auto-linked related memories based on similarity
-- **Hierarchical Organization** - Explore memories by section/subsection
-- **Export/Import** - Backup and restore with merge strategies
-- **Knowledge Graph** - Interactive HTML visualization with Mermaid diagram rendering
-- **Live Graph Server** - Auto-starts HTTP server for remote access via SSH
-- **Statistics & Analytics** - Tag usage, trends, and connection insights
+- 💾 **Persistent Storage** - SQLite-backed database with optional cloud sync (S3, GCS, Azure)
+- 🔍 **Semantic Search** - Vector embeddings (TF-IDF, sentence-transformers, or OpenAI)
+- 🤖 **LLM Deduplication** - Find and merge duplicate memories with AI-powered comparison
+- ⚡ **Memory Automation** - Structured tools for TODOs, issues, and section placeholders
+- 🔗 **Memory Linking** - Typed edges, importance boosting, and cluster detection
+- 📡 **Event Notifications** - Poll-based system for inter-agent communication
+- 🎯 **Advanced Queries** - Full-text search, date ranges, tag filters (AND/OR/NOT)
+- 🔀 **Cross-references** - Auto-linked related memories based on similarity
+- 📂 **Hierarchical Organization** - Explore memories by section/subsection
+- 📦 **Export/Import** - Backup and restore with merge strategies
+- 🕸️ **Knowledge Graph** - Interactive HTML visualization with Mermaid diagram rendering
+- 🌐 **Live Graph Server** - Auto-starts HTTP server for remote access via SSH
+- 📊 **Statistics & Analytics** - Tag usage, trends, and connection insights
 
 ## Install
 
@@ -41,7 +48,8 @@ Includes cloud storage (S3/R2) and OpenAI embeddings out of the box.
 pip install "memora[local]" @ git+https://github.com/agentic-mcp-tools/memora.git
 ```
 
-## Usage
+<details id="usage">
+<summary><big><big><strong>Usage</strong></big></big></summary>
 
 The server runs automatically when configured in Claude Code. Manual invocation:
 
@@ -56,11 +64,16 @@ memora-server --graph-port 8765
 memora-server --transport streamable-http --host 127.0.0.1 --port 8080
 ```
 
-## Claude Code Config
+</details>
+
+<details id="configuration">
+<summary><big><big><strong>Configuration</strong></big></big></summary>
+
+### Claude Code
 
 Add to `.mcp.json` in your project root:
 
-### Local DB
+**Local DB:**
 ```json
 {
   "mcpServers": {
@@ -77,7 +90,26 @@ Add to `.mcp.json` in your project root:
 }
 ```
 
-### Cloud DB (S3/R2)
+**Cloud DB (Cloudflare D1) - Recommended:**
+```json
+{
+  "mcpServers": {
+    "memora": {
+      "command": "memora-server",
+      "args": ["--no-graph"],
+      "env": {
+        "MEMORA_STORAGE_URI": "d1://<account-id>/<database-id>",
+        "CLOUDFLARE_API_TOKEN": "<your-api-token>",
+        "MEMORA_ALLOW_ANY_TAG": "1"
+      }
+    }
+  }
+}
+```
+
+With D1, use `--no-graph` to disable the local visualization server. Instead, use the hosted graph at your Cloudflare Pages URL (see [Cloud Graph](#cloud-graph)).
+
+**Cloud DB (S3/R2) - Sync mode:**
 ```json
 {
   "mcpServers": {
@@ -97,7 +129,7 @@ Add to `.mcp.json` in your project root:
 }
 ```
 
-## Codex CLI Config
+### Codex CLI
 
 Add to `~/.codex/config.toml`:
 
@@ -114,12 +146,16 @@ Add to `~/.codex/config.toml`:
   }
 ```
 
-## Environment Variables
+</details>
+
+<details id="environment-variables">
+<summary><big><big><strong>Environment Variables</strong></big></big></summary>
 
 | Variable               | Description                                                                 |
 |------------------------|-----------------------------------------------------------------------------|
 | `MEMORA_DB_PATH`       | Local SQLite database path (default: `~/.local/share/memora/memories.db`)  |
-| `MEMORA_STORAGE_URI`   | Cloud storage URI for S3/R2 (e.g., `s3://bucket/memories.db`)              |
+| `MEMORA_STORAGE_URI`   | Storage URI: `d1://<account>/<db-id>` (D1) or `s3://bucket/memories.db` (S3/R2) |
+| `CLOUDFLARE_API_TOKEN` | API token for D1 database access (required for `d1://` URI)                |
 | `MEMORA_CLOUD_ENCRYPT` | Encrypt database before uploading to cloud (`true`/`false`)                |
 | `MEMORA_CLOUD_COMPRESS`| Compress database before uploading to cloud (`true`/`false`)               |
 | `MEMORA_CACHE_DIR`     | Local cache directory for cloud-synced database                            |
@@ -138,7 +174,10 @@ Add to `~/.codex/config.toml`:
 | `AWS_ENDPOINT_URL`     | S3-compatible endpoint for R2/MinIO                                        |
 | `R2_PUBLIC_DOMAIN`     | Public domain for R2 image URLs                                            |
 
-## Semantic Search & Embeddings
+</details>
+
+<details id="semantic-search--embeddings">
+<summary><big><big><strong>Semantic Search & Embeddings</strong></big></big></summary>
 
 Memora supports three embedding backends:
 
@@ -162,49 +201,19 @@ memory_rebuild_embeddings
 memory_rebuild_crossrefs
 ```
 
-## Neovim Integration
+</details>
 
-Browse memories directly in Neovim with Telescope. Copy the plugin to your config:
+<details id="live-graph-server">
+<summary><big><big><strong>Live Graph Server</strong></big></big></summary>
 
-```bash
-# For kickstart.nvim / lazy.nvim
-cp nvim/memora.lua ~/.config/nvim/lua/kickstart/plugins/
-```
+A built-in HTTP server starts automatically with the MCP server, serving an interactive knowledge graph visualization.
 
-**Usage:** Press `<leader>sm` to open the memory browser with fuzzy search and preview.
-
-Requires: `telescope.nvim`, `plenary.nvim`, and `memora` installed in your Python environment.
-
-## Knowledge Graph Export
-
-Export memories as an interactive HTML knowledge graph visualization:
-
-```python
-# Via MCP tool
-memory_export_graph(output_path="~/memories_graph.html", min_score=0.25)
-```
-
-Interactive vis.js graph with tag/section filtering, memory tooltips, Mermaid diagram rendering, and auto-resized image thumbnails. Click nodes to view content, drag to explore.
-
-## Graph Color Scheme
-
-| Type | Color | Meaning |
-|------|-------|---------|
-| **Tags** | Purple shades | Different tags get different purple tones |
-| **Issues** | Red | Open |
-| | Orange | In Progress |
-| | Green | Resolved |
-| | Gray | Won't Fix |
-| **TODOs** | Blue | Open |
-| | Orange | In Progress |
-| | Green | Completed |
-| | Red | Blocked |
-
-Node size reflects connection count (more connections = larger node).
-
-## Live Graph Server
-
-A built-in HTTP server starts automatically with the MCP server, serving the graph visualization on-demand.
+<table>
+<tr>
+<td align="center"><img src="media/ui_details.png" alt="Details Panel" width="400"><br><em>Details Panel</em></td>
+<td align="center"><img src="media/ui_timeline.png" alt="Timeline Panel" width="400"><br><em>Timeline Panel</em></td>
+</tr>
+</table>
 
 **Access locally:**
 ```
@@ -226,35 +235,110 @@ ssh -L 8765:localhost:8765 user@remote
 }
 ```
 
-Use different ports on different machines to avoid conflicts when forwarding multiple servers.
-
 To disable: add `"--no-graph"` to args in your MCP config.
 
 ### Graph UI Features
 
-The graph visualization includes an interactive right panel with two tabs:
+- **Details Panel** - View memory content, metadata, tags, and related memories
+- **Timeline Panel** - Browse memories chronologically, click to highlight in graph
+- **Time Slider** - Filter memories by date range, drag to explore history
+- **Real-time Updates** - Graph and timeline update via SSE when memories change
+- **Filters** - Tag/section dropdowns, zoom controls
+- **Mermaid Rendering** - Code blocks render as diagrams
 
-**Detail Tab:**
-- View full memory content, metadata, and tags
-- See related memories with similarity scores
-- Mermaid diagram rendering for code blocks
-- Auto-resized image thumbnails
+### Node Colors
 
-**Timeline Tab:**
-- Browse all memories in reverse chronological order
-- Each row shows: `#ID - Title` with date badge and Details button
-- Click a memory row to highlight it and its connections in the graph
-- Click "Details" to open the full memory view
-- Selected memory is highlighted with grey background
-- Auto-scrolls to keep selected memory visible
+- 🟣 **Tags** - Purple shades by tag
+- 🔴 **Issues** - Red (open), Orange (in progress), Green (resolved), Gray (won't fix)
+- 🔵 **TODOs** - Blue (open), Orange (in progress), Green (completed), Red (blocked)
 
-**Additional UI:**
-- Version badge in top right corner
-- Time slider for filtering memories by date range
-- Tag/section dropdown filters
-- Zoom and pan controls
+Node size reflects connection count.
 
-## LLM Deduplication
+</details>
+
+<details id="neovim-integration">
+<summary><big><big><strong>Neovim Integration</strong></big></big></summary>
+
+Browse memories directly in Neovim with Telescope. Copy the plugin to your config:
+
+```bash
+# For kickstart.nvim / lazy.nvim
+cp nvim/memora.lua ~/.config/nvim/lua/kickstart/plugins/
+```
+
+**Usage:** Press `<leader>sm` to open the memory browser with fuzzy search and preview.
+
+Requires: `telescope.nvim`, `plenary.nvim`, and `memora` installed in your Python environment.
+
+</details>
+
+<details id="knowledge-graph-export">
+<summary><big><big><strong>Knowledge Graph Export (Optional)</strong></big></big></summary>
+
+For offline viewing, export memories as a static HTML file:
+
+```python
+memory_export_graph(output_path="~/memories_graph.html", min_score=0.25)
+```
+
+This is optional - the Live Graph Server provides the same visualization with real-time updates.
+
+</details>
+
+<details id="cloud-graph">
+<summary><big><big><strong>Cloud Graph (Recommended for D1)</strong></big></big></summary>
+
+When using Cloudflare D1 as your database, the graph visualization is hosted on Cloudflare Pages - no local server needed.
+
+**Benefits:**
+- Access from anywhere (no SSH tunneling)
+- Real-time updates via WebSocket
+- Multi-database support via `?db=` parameter
+- Secure access with Cloudflare Zero Trust
+
+**Setup:**
+
+1. **Create D1 database:**
+   ```bash
+   npx wrangler d1 create memora-graph
+   npx wrangler d1 execute memora-graph --file=memora-graph/schema.sql
+   ```
+
+2. **Deploy Pages:**
+   ```bash
+   cd memora-graph
+   npx wrangler pages deploy ./public --project-name=memora-graph
+   ```
+
+3. **Configure bindings** in Cloudflare Dashboard:
+   - Pages → memora-graph → Settings → Bindings
+   - Add D1: `DB_MEMORA` → your database
+   - Add R2: `R2_MEMORA` → your bucket (for images)
+
+4. **Configure MCP** with D1 URI:
+   ```json
+   {
+     "env": {
+       "MEMORA_STORAGE_URI": "d1://<account-id>/<database-id>",
+       "CLOUDFLARE_API_TOKEN": "<your-token>"
+     }
+   }
+   ```
+
+**Access:** `https://memora-graph.pages.dev`
+
+**Secure with Zero Trust:**
+1. Cloudflare Dashboard → Zero Trust → Access → Applications
+2. Add application for `memora-graph.pages.dev`
+3. Create policy with allowed emails
+4. Pages → Settings → Enable Access Policy
+
+See [`memora-graph/`](memora-graph/) for detailed setup and multi-database configuration.
+
+</details>
+
+<details id="llm-deduplication">
+<summary><big><big><strong>LLM Deduplication</strong></big></big></summary>
 
 Find and merge duplicate memories using AI-powered semantic comparison:
 
@@ -274,7 +358,10 @@ memory_merge(source_id=123, target_id=456, merge_strategy="append")
 
 Works with any OpenAI-compatible API (OpenAI, OpenRouter, Azure, etc.) via `OPENAI_BASE_URL`.
 
-## Memory Automation Tools
+</details>
+
+<details id="memory-automation-tools">
+<summary><big><big><strong>Memory Automation Tools</strong></big></big></summary>
 
 Structured tools for common memory types:
 
@@ -289,7 +376,10 @@ memory_create_issue(content="Bug in login flow", status="open", severity="major"
 memory_create_section(content="Architecture", section="docs", subsection="api")
 ```
 
-## Memory Linking
+</details>
+
+<details id="memory-linking">
+<summary><big><big><strong>Memory Linking</strong></big></big></summary>
 
 Manage relationships between memories:
 
@@ -308,3 +398,5 @@ memory_boost(memory_id=42, boost_amount=0.5)
 # Detect clusters of related memories
 memory_clusters(min_cluster_size=2, min_score=0.3)
 ```
+
+</details>

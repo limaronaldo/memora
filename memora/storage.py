@@ -17,7 +17,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Sequence as TypingSequence
 
-from .backends import StorageBackend, parse_backend_uri
+from .backends import StorageBackend, parse_backend_uri, D1Connection
 
 ROOT = Path(__file__).resolve().parent
 
@@ -297,6 +297,9 @@ def ensure_schema(conn: sqlite3.Connection) -> None:
 
 
 def _ensure_fts(conn: sqlite3.Connection) -> None:
+    # D1 doesn't support FTS5 virtual tables
+    if isinstance(conn, D1Connection):
+        return
     table_exists = conn.execute(
         "SELECT name FROM sqlite_master WHERE type='table' AND name='memories_fts'"
     ).fetchone()
@@ -816,6 +819,9 @@ def _validate_metadata_filters(metadata_filters: Optional[Dict[str, Any]]) -> Di
 
 
 def _fts_enabled(conn: sqlite3.Connection) -> bool:
+    # D1 doesn't support FTS5 virtual tables
+    if isinstance(conn, D1Connection):
+        return False
     return bool(
         conn.execute(
             "SELECT name FROM sqlite_master WHERE type='table' AND name='memories_fts'"
@@ -1629,9 +1635,10 @@ def add_memory(
 
     if has_images:
         # First pass: insert without processed images to get memory_id
+        now = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
         cur = conn.execute(
-            "INSERT INTO memories (content, metadata, tags) VALUES (?, ?, ?)",
-            (content, None, tags_json),
+            "INSERT INTO memories (content, metadata, tags, created_at) VALUES (?, ?, ?, ?)",
+            (content, None, tags_json, now),
         )
         memory_id = cur.lastrowid
 
@@ -1648,9 +1655,10 @@ def add_memory(
         # No images - single pass
         prepared_metadata = _prepare_metadata(metadata)
         metadata_json = json.dumps(prepared_metadata, ensure_ascii=False) if prepared_metadata else None
+        now = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
         cur = conn.execute(
-            "INSERT INTO memories (content, metadata, tags) VALUES (?, ?, ?)",
-            (content, metadata_json, tags_json),
+            "INSERT INTO memories (content, metadata, tags, created_at) VALUES (?, ?, ?, ?)",
+            (content, metadata_json, tags_json, now),
         )
         memory_id = cur.lastrowid
 
@@ -1684,7 +1692,8 @@ def add_memories(
         _enforce_tag_whitelist(validated_tags)
         metadata_json = json.dumps(prepared_metadata, ensure_ascii=False) if prepared_metadata else None
         tags_json = json.dumps(validated_tags, ensure_ascii=False)
-        prepared.append((content, metadata_json, tags_json))
+        now = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
+        prepared.append((content, metadata_json, tags_json, now))
         rows.append({
             "content": content,
             "metadata_json": metadata_json,
@@ -1697,7 +1706,7 @@ def add_memories(
         return []
 
     cur = conn.executemany(
-        "INSERT INTO memories (content, metadata, tags) VALUES (?, ?, ?)",
+        "INSERT INTO memories (content, metadata, tags, created_at) VALUES (?, ?, ?, ?)",
         prepared,
     )
 
@@ -1774,29 +1783,65 @@ def update_memory(
     if tags is not None:
         _enforce_tag_whitelist(new_tags)
 
+    # Check if content actually changed (affects whether we need to recompute embeddings)
+    content_changed = content is not None and new_content != existing["content"]
+
     # Serialize for storage
     metadata_json = json.dumps(new_metadata, ensure_ascii=False) if new_metadata else None
     tags_json = json.dumps(new_tags, ensure_ascii=False)
 
     # Update the memory
-    conn.execute(
-        "UPDATE memories SET content = ?, metadata = ?, tags = ?, updated_at = datetime('now') WHERE id = ?",
-        (new_content, metadata_json, tags_json, memory_id),
+    now = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
+    cur = conn.execute(
+        "UPDATE memories SET content = ?, metadata = ?, tags = ?, updated_at = ? WHERE id = ?",
+        (new_content, metadata_json, tags_json, now, memory_id),
     )
 
-    # Update FTS index
-    _fts_upsert(conn, memory_id, new_content, metadata_json, tags_json)
+    # Verify the update affected a row (helps catch D1 issues)
+    if hasattr(cur, 'rowcount') and cur.rowcount == 0:
+        # Row wasn't updated - this shouldn't happen since we checked existence
+        raise RuntimeError(f"UPDATE affected 0 rows for memory {memory_id}")
 
-    # Update embeddings
-    vector = _compute_embedding(new_content, new_metadata, new_tags)
-    _upsert_embedding(conn, memory_id, vector)
+    # Only recompute expensive operations if content changed
+    # Metadata-only updates (status, tags, etc.) don't need embedding/crossref recalc
+    if content_changed:
+        # Update FTS index
+        _fts_upsert(conn, memory_id, new_content, metadata_json, tags_json)
 
-    # Update cross-references
-    _update_crossrefs(conn, memory_id)
+        # Update embeddings (calls OpenAI API - ~1-2 sec)
+        vector = _compute_embedding(new_content, new_metadata, new_tags)
+        _upsert_embedding(conn, memory_id, vector)
+
+        # Skip cross-references update - too expensive for D1 HTTP API (~15 sec)
+        # Cross-refs remain valid enough until manual rebuild via memory_rebuild_crossrefs
 
     conn.commit()
     _emit_event(conn, memory_id, new_tags)
-    return get_memory(conn, memory_id)
+
+    # Return the data we just wrote instead of reading back from DB
+    # This avoids D1 read replica lag issues where reads immediately
+    # after writes might return stale data from a read replica
+    result = {
+        "id": memory_id,
+        "content": new_content,
+        "metadata": _present_metadata(new_metadata) if new_metadata else None,
+        "tags": new_tags,
+        "created_at": existing.get("created_at"),
+        "updated_at": now,
+    }
+
+    # Preserve importance fields from existing record
+    if "importance" in existing:
+        result["importance"] = existing["importance"]
+        result["access_count"] = existing.get("access_count", 0)
+        result["last_accessed"] = existing.get("last_accessed")
+        result["importance_score"] = existing.get("importance_score")
+
+    # Get crossrefs - these were just updated so might also be stale,
+    # but the semantic content matters more for consistency
+    result["related"] = get_crossrefs(conn, memory_id)
+
+    return result
 
 
 def delete_memory(conn: sqlite3.Connection, memory_id: int) -> bool:
