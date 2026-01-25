@@ -17,7 +17,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Sequence as TypingSequence
 
-from .backends import StorageBackend, parse_backend_uri
+from .backends import StorageBackend, parse_backend_uri, D1Connection
 
 ROOT = Path(__file__).resolve().parent
 
@@ -297,6 +297,9 @@ def ensure_schema(conn: sqlite3.Connection) -> None:
 
 
 def _ensure_fts(conn: sqlite3.Connection) -> None:
+    # D1 doesn't support FTS5 virtual tables
+    if isinstance(conn, D1Connection):
+        return
     table_exists = conn.execute(
         "SELECT name FROM sqlite_master WHERE type='table' AND name='memories_fts'"
     ).fetchone()
@@ -816,6 +819,9 @@ def _validate_metadata_filters(metadata_filters: Optional[Dict[str, Any]]) -> Di
 
 
 def _fts_enabled(conn: sqlite3.Connection) -> bool:
+    # D1 doesn't support FTS5 virtual tables
+    if isinstance(conn, D1Connection):
+        return False
     return bool(
         conn.execute(
             "SELECT name FROM sqlite_master WHERE type='table' AND name='memories_fts'"
